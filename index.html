@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze Game - Superficie Lunar</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000; /* Fondo negro para el espacio */
+        }
+        #superficieLunarCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .wall {
+            position: absolute;
+            width: 50px; /* Ajusta el tamaño de las paredes según tus imágenes */
+            height: 50px; /* Ajusta el tamaño de las paredes según tus imágenes */
+            background-image: url('t.png'); /* Cambia 't.png' por la ruta correcta de tu imagen */
+            background-size: cover;
+        }
+        #player {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background-image: url('per.png'); /* Cambia 'per.png' por la ruta correcta de tu imagen */
+            background-size: cover;
+        }
+        .greenSquare {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background-image: url('m1.png'); 
+            background-size: cover;
+        }
+        #laser {
+            position: absolute;
+            width: 100px; /* Ajusta el tamaño del láser según tus necesidades */
+            height: 10px; /* Ajusta el tamaño del láser según tus necesidades */
+            background-image: url('l.png'); /* Ruta de la imagen del láser */
+            background-size: cover;
+            display: none; /* Ocultar la imagen por defecto */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="superficieLunarCanvas"></canvas>
+    <div id="player"></div>
+    <div id="laser"></div>
+  
+    <script>
+        const canvas = document.getElementById('superficieLunarCanvas');
+        const ctx = canvas.getContext('2d');
+        const greenSquares = [];
+        let gameOver = false;
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        // Función para dibujar el cielo
+        function drawSky() {
+            ctx.fillStyle = '#000'; // Negro para el espacio
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        // Función para dibujar la luna (como un círculo)
+        function drawMoon(x, y, radius) {
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+            ctx.fillStyle = '#FFFFCC'; // Color de la luna
+            ctx.fill();
+            ctx.shadowColor = '#FFFFCC';
+            ctx.shadowBlur = 30;
+            ctx.closePath();
+        }
+        
+        // Función para dibujar la superficie lunar
+        function drawSurface() {
+            ctx.fillStyle = '#AAA'; // Gris para la superficie lunar
+            ctx.fillRect(0, canvas.height * 0.7, canvas.width, canvas.height * 0.3);
+        }
+        
+        // Función para dibujar cráteres
+        function drawCraters() {
+            const numCraters = 5; // Número de cráteres
+            for (let i = 0; i < numCraters; i++) {
+                const x = Math.random() * canvas.width;
+                const y = (Math.random() * canvas.height * 0.3) + (canvas.height * 0.7);
+                const radius = (Math.random() * 30) + 10;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+                ctx.fillStyle = '#888'; // Gris más oscuro para los cráteres
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+        
+        // Función para dibujar estrellas
+        function drawStars(numStars) {
+            for (let i = 0; i < numStars; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height * 0.7; // Solo en la parte superior
+                const radius = Math.random() * 2;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+                ctx.fillStyle = '#FFFFFF'; // Color de las estrellas
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+        
+        function drawScene() {
+            drawSky();
+            drawStars(100);
+            drawMoon(canvas.width * 0.8, canvas.height * 0.2, 50); // Posición y tamaño de la luna en el cielo
+            drawSurface();
+            drawCraters();
+        }
+        
+        // Redibujar cuando se redimensiona la ventana
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            drawScene();
+        });
+        
+        drawScene();
+        
+        // Movimiento del jugador
+        document.addEventListener('DOMContentLoaded', function () {
+            const player = document.getElementById('player');
+            const playerSize = 70; // Tamaño del jugador
+            const initialPlayerLeft = 0; // Posición inicial en el borde izquierdo
+            const initialPlayerTop = window.innerHeight - playerSize; // Posición inicial en la parte inferior
+            player.style.left = initialPlayerLeft + 'px';
+            player.style.top = initialPlayerTop + 'px';
+            
+            const walls = document.querySelectorAll('.wall');
+        
+            document.addEventListener('keydown', function (event) {
+                if (gameOver) return;
+                
+                const key = event.key;
+                let playerTop = parseInt(player.style.top) || 0;
+                let playerLeft = parseInt(player.style.left) || 0;
+        
+                switch (key) {
+                    case 'ArrowUp':
+                        playerTop = Math.max(0, playerTop - playerSize);
+                        break;
+                    case 'ArrowDown':
+                        playerTop = Math.min(canvas.height - playerSize, playerTop + playerSize);
+                        break;
+                    case 'ArrowLeft':
+                        playerLeft = Math.max(0, playerLeft - playerSize);
+                        break;
+                    case 'ArrowRight':
+                        playerLeft = Math.min(canvas.width - playerSize, playerLeft + playerSize);
+                        break;
+                    case 'a':
+                        hideImagesAroundPlayer();
+                        break;
+                    default:
+                        return;
+                }
+        
+                player.style.top = playerTop + 'px';
+                player.style.left = playerLeft + 'px';
+            });
+        
+            function hideImagesAroundPlayer() {
+                const playerTop = parseInt(player.style.top) || 0;
+                const playerLeft = parseInt(player.style.left) || 0;
+        
+                for (const greenSquare of greenSquares) {
+                    const squareTop = parseInt(greenSquare.style.top) || 0;
+                    const squareLeft = parseInt(greenSquare.style.left) || 0;
+        
+                    if (
+                        playerLeft + playerSize >= squareLeft && // Colisión de la derecha
+                        playerLeft <= squareLeft + playerSize && // Colisión de la izquierda
+                        playerTop + playerSize >= squareTop && // Colisión de la parte inferior
+                        playerTop <= squareTop + playerSize // Colisión de la parte superior
+                    ) {
+                        greenSquare.style.display = 'none';
+                    }
+                }
+        
+                // Mostrar el láser
+                const laser = document.getElementById('laser');
+                laser.style.top = (playerTop + playerSize / 2 - 5) + 'px'; // Ajusta la posición vertical del láser
+                laser.style.left = (playerLeft + playerSize) + 'px'; // Ajusta la posición horizontal del láser
+                laser.style.display = 'block'; // Mostrar el láser
+        
+                // Ocultar el láser después de 2 segundos
+                setTimeout(() => {
+                    laser.style.display = 'none';
+                }, 100);
+            }
+        
+            // Crear cuadros verdes solo una vez al principio
+            createGreenSquares();
+        
+            function createGreenSquares() {
+                for (let i = 0; i < 5; i++) {
+                    const greenSquare = document.createElement('div');
+                    greenSquare.classList.add('greenSquare');
+                    greenSquare.style.left = Math.random() * canvas.width / 2 + 'px'; // Solo en la parte izquierda
+                    greenSquare.style.top = canvas.height * 0.7 - 60 + 'px'; // Para que aparezcan en la superficie lunar
+                    document.body.appendChild(greenSquare);
+                    greenSquares.push(greenSquare);
+                    greenSquare.speedX = Math.random() > 0.5 ? 2 : -2; // Velocidad aleatoria en dirección X
+                    animateGreenSquare(greenSquare);
+                }
+            }
+        
+            function animateGreenSquare(square) {
+                let x = parseFloat(square.style.left);
+        
+                function update() {
+                    x += square.speedX;
+        
+                    if (x < 0) {
+                        x = 0;
+                        square.speedX *= -1;
+                    } else if (x > canvas.width - playerSize) {
+                        x = canvas.width - playerSize;
+                        square.speedX *= -1;
+                    }
+        
+                    square.style.left = x + 'px';
+        
+                    requestAnimationFrame(update);
+                }
+        
+                update();
+            }
+        });
+    </script>
+</body>
+</html>
